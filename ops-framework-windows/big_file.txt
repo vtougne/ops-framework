@@ -1,0 +1,2204 @@
+./                                                                                                  0000755 €    !Cý4001001 00000000000 14035051101 012536  5                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    ./common/                                                                                           0000755 €    !Cý4001001 00000000000 14035051072 014035  5                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    ./common/fct_exec.cmd                                                                               0000755 €    !Cý4001001 00000005762 14033343116 016320  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    :: fct_exec.cmd version 1.06
+
+ 
+
+ 
+
+if "%~1"=="" echo usage: fct_exec.cmd required command line in arguement&exit /b 1
+
+ 
+
+ 
+
+ 
+
+call "%~dp0"\fct_set_date_time.cmd
+
+ 
+
+if defined FCT_LOG_FILE_NAME (
+
+  set output=%FCT_LOG_FILE_NAME%
+
+  ) else (
+
+  set output=nul
+
+)
+
+ 
+
+set fct_exec_arg=%*
+
+if not exist %shadow_file% Goto :bypass_shadow
+
+ 
+
+for /f "tokens=1 delims==" %%a in ('type %shadow_file%') do (
+
+  set %%a=xxxxxxxxxxxx
+
+)
+
+ 
+
+echo %fct_exec_arg% | findstr /R "{{[A-Za-z0-9_-]*}}" >nul
+
+if not %errorlevel% == 0 Goto :skip_templating_shadow
+
+ 
+
+REM echo debug je passe dans shadow
+
+for /f "tokens=*" %%a in ('powershell %appli_path%\common\templator.ps1 -input_str '%fct_exec_arg%'') do (
+
+  REM echo debug tws_wrapper_main_command: %%a
+
+  set fct_exec_arg_hidden_shadow_keys=%%a
+
+)
+
+ 
+
+REM echo debug fct_exec_arg_hidden_shadow_keys: %fct_exec_arg_hidden_shadow_keys%
+
+:skip_templating_shadow
+
+for /f "tokens=*" %%a in ('type %shadow_file%') do (
+
+  set %%a
+
+)
+
+ 
+
+REM echo debug tws_wrapper_main_command_hidden_shadow_keys: %tws_wrapper_main_command_hidden_shadow_keys%
+
+ 
+
+:bypass_shadow
+
+ 
+
+echo %fct_exec_arg%| findstr /R "{{[A-Za-z0-9_-]*}}" >nul
+
+if not %errorlevel% == 0 Goto :skip_templating
+
+ 
+
+for /f "tokens=*" %%a in ('powershell %appli_path%\common\templator.ps1 -input_str '%fct_exec_arg%'') do (
+
+  REM echo debug tws_wrapper_main_command: %%a
+
+  set fct_exec_arg=%%a
+
+)
+
+ 
+
+:skip_templating
+
+ 
+
+if not defined fct_exec_arg_hidden_shadow_keys (
+
+  echo %date_num% %time_num% %caller% %msg_exec% %fct_exec_arg%
+
+) else (
+
+  echo %date_num% %time_num% %caller% %msg_exec% %fct_exec_arg_hidden_shadow_keys%
+
+)
+
+ 
+
+REM echo %date_num% %time_num% %caller% %msg_exec% %*
+
+if defined FCT_LOG_FILE_NAME echo %date_num% %time_num% %caller% %msg_exec% %*>> %output%
+
+ 
+
+call %fct_exec_arg%
+
+set cmd_status=%errorlevel%
+
+ 
+
+call "%~dp0"\fct_set_date_time.cmd
+
+ 
+
+if %cmd_status% NEQ 0 (
+
+  if defined FCT_LOG_FILE_NAME echo %date_num% %time_num% %caller% %msg_error% The previous command failed with error code %cmd_status% [ %* ] >>%output%
+
+  if not defined fct_exec_arg_hidden_shadow_keys (
+
+    REM echo %date_num% %time_num% %caller% %msg_success% The command worked successfuly [ %fct_exec_arg% ]
+
+                echo %date_num% %time_num% %caller% %msg_error% The command failed with error code %cmd_status% [ %fct_exec_arg% ]
+
+  ) else (
+
+    REM echo %date_num% %time_num% %caller% %msg_success% The command worked successfuly [ %fct_exec_arg_hidden_shadow_keys% ]
+
+                echo %date_num% %time_num% %caller% %msg_error% The command failed with error code %cmd_status% [ %fct_exec_arg_hidden_shadow_keys% ]
+
+  )
+
+) else (
+
+  if not defined fct_exec_arg_hidden_shadow_keys (
+
+    echo %date_num% %time_num% %caller% %msg_success% The command worked successfuly [ %fct_exec_arg% ]
+
+  ) else (
+
+    echo %date_num% %time_num% %caller% %msg_success% The command worked successfuly [ %fct_exec_arg_hidden_shadow_keys% ]
+
+  )
+
+  if defined FCT_LOG_FILE_NAME echo %date_num% %time_num% %msg_success% The previous command worked successfuly [ %* ] >>%output%
+
+)
+
+ 
+
+exit /b %cmd_status%              ./common/fct_set_date_time.cmd                                                                      0000755 €    !Cý4001001 00000001662 14031064665 020204  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    rem This script set two variables
+
+rem date_num, format: YYYYMMDD
+
+rem time_num, format: HHMMSS
+
+ 
+
+ 
+
+set the_date=%date%
+
+echo %date% | findstr /r /c:"^[A-Z].*">nul
+
+if not %errorlevel% == 0 Goto :Main
+
+set the_date=%date:~4%
+
+ 
+
+:Main
+
+ 
+
+ 
+
+rem ==============================================================================
+
+for /F %%a in ('echo %the_date:~6,4%%the_date:~3,2%%the_date:~0,2%')  DO SET date_num=%%~a
+
+set hh="h%time:~0,1%h"
+
+
+if %hh%=="h h" (
+
+for /F %%a in ('echo 0%time:~1,1%%time:~3,2%%time:~6,2%') DO SET time_num=%%~a
+
+) ELSE (
+
+for /F %%a in ('echo %time:~0,2%%time:~3,2%%time:~6,2%') DO SET time_num=%%~a
+
+)
+
+rem ==============================================================================
+
+ 
+
+set dd=%date_num:~6,2%
+
+set mo=%date_num:~4,2%
+
+set yyyy=%date_num:~0,4%
+
+set yy=%date_num:~2,2%
+
+set hh=%time_num:~0,2%
+
+set mi=%time_num:~2,2%
+
+set ss=%time_num:~4,2%
+
+set date_yyyymodd=%date_num%
+
+set time_hhmnss=%time_num%                                                                              ./common/fct_trace.cmd                                                                              0000755 €    !Cý4001001 00000000436 13704360332 016466  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    :: fct_trace.cmd version 1.04
+
+call "%~dp0"\fct_set_date_time.cmd
+
+Setlocal EnableDelayedExpansion
+
+ 
+
+set args=%*
+
+ 
+
+set output=%FCT_LOG_FILE_NAME%
+
+ 
+
+if defined FCT_LOG_FILE_NAME (
+
+  echo !date_num! !time_num! !caller! !args!>>!output!
+
+)
+
+ 
+
+ 
+
+echo %date_num% %time_num% %caller% %*
+
+                                                                                                                                                                                                                                  ./common/file_processor.cmd                                                                         0000755 €    !Cý4001001 00000035213 14024436527 017561  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    @echo off
+
+ 
+
+Setlocal EnableDelayedExpansion
+
+call %~dp0\..\common\set_env.cmd %~dp0%~n0
+
+ 
+
+rem vtougne 20200530 creation
+
+echo.&!fct_trace! !msg_info! file_processor.cmd version 1.15
+
+echo.
+
+ 
+
+rem default values:
+
+set --fail_if_file_not_present=yes
+
+set --delete_source=yes
+
+set --archive=no
+
+set --transfer_only_most_recent_file=no
+
+ 
+
+ 
+
+rem set functions
+
+REM set fct_get_path=call %common_path%\fct_get_path.cmd
+
+REM set fct_usage=call :Usage
+
+ 
+
+ 
+
+ 
+
+ 
+
+set process_method=%1
+
+if "!process_method!" == "--copy_file" shift & Goto :GetOptions
+
+if "!process_method!" == "--push_file_to_udm" shift & set way=push& Goto :GetOptions
+
+if "!process_method!" == "--get_file_from_udm" shift & set way=get& Goto :GetOptions
+
+echo !msg_error! option %1 unknown, first option must be --copy_file --push_file_to_udm or --get_file_from_udm&Goto :usage
+
+ 
+
+ 
+
+ 
+
+:GetOptions
+
+ 
+
+echo %1 | findstr /c:":">nul
+
+if %errorlevel%==0 (
+
+  Goto :GetOpsColonSep
+
+) else (
+
+  Goto :GetOpsSpaceSep
+
+)
+
+ 
+
+:GetOpsSpaceSep
+
+Set Option=%1
+
+ 
+
+If "%1" == "" Goto :Main
+
+ 
+
+  set option_name=%1
+
+  set option_value=%2
+
+ 
+
+  if "!option_value!" == "" echo.&echo !msg_error! value is required for option !option_name!&Goto :Usage
+
+  REM if "!option_value!" == "" set option_value_missing_detected=yes
+
+ 
+
+  if "!option_name!" == "--archive"                                                                                                        ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--archive_path"                                                                            ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--source_path"                                                                                             ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--file_mask"                                                                                   ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--target_path"                                                                               ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--delete_source"                                                                          ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--new_name"                                                                                ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--fail_if_file_not_present"                        ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--udm_id"                                                                                                       ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+  if "!option_name!" == "--transfer_only_most_recent_file"        ( set !option_name!=!option_value!&shift & shift & Goto :GetOpsSpaceSep )
+
+ 
+
+  echo !msg_error! option "!option_name!" is unknown&Goto :usage
+
+  if "!option_value_missing_detected!" == "yes" echo  !msg_error! value is missing for option !option_name!
+
+ 
+
+  
+
+Goto :GetOpsSpaceSep
+
+ 
+
+ 
+
+:GetOpsColonSep
+
+set arg=%1
+
+ 
+
+If "%1" == "" Goto :Main
+
+ 
+
+  for /f "tokens=1,* delims=:" %%a in ('echo !arg!') do (
+
+    set option_name=%%a
+
+    set option_value=%%b
+
+  )
+
+  
+
+  if "!option_value!" == "" echo.&echo !msg_error! value is required for option !option_name!&Goto :Usage
+
+  REM if "!option_value!" == "" set option_value_missing_detected=yes
+
+ 
+
+  if "!option_name!" == "--archive"                                                                                                        ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--archive_path"                                                                            ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--source_path"                                                                                             ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--file_mask"                                                                                   ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--target_path"                                                                               ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--delete_source"                                                                          ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--new_name"                                                                                ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--fail_if_file_not_present"                        ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--udm_id"                                                                                                       ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+  if "!option_name!" == "--transfer_only_most_recent_file"        ( set !option_name!=!option_value!& shift & Goto :GetOpsColonSep )
+
+ 
+
+  echo !msg_error! option "!option_name!" is unknown&Goto :usage
+
+  if "!option_value_missing_detected!" == "yes" echo  !msg_error! value is missing for option !option_name!
+
+ 
+
+  
+
+Goto :GetOpsSpaceSep
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+:Main
+
+ 
+
+:Check_Option
+
+ 
+
+call :check_option_fail_if_file_not_present ||exit /b 1
+
+call :check_option_delete_source||exit /b 1
+
+call :check_option_transfer_only_most_recent_file||exit /b 1
+
+call :check_option_archive||exit /b 1
+
+ 
+
+ 
+
+if defined --archive_path (
+
+  set --archive=yes
+
+  set archive_path=!--archive_path!
+
+)
+
+ 
+
+ 
+
+if !--archive!==yes (
+
+  call :f_IsFolder !archive_path!
+
+  if !is_folder!==no !fct_trace! !msg_error! archive folder !archive_path! does not exist&exit /b 4
+
+)
+
+ 
+
+if "!process_method!" == "--push_file_to_udm" (
+
+  if not defined --source_path !fct_trace! !msg_error! Option --source_path is not defined&Goto:Usage
+
+  set UDMID=!appli_env_letter_u!!--udm_id!
+
+  set --target_path=!appli_path!\data\out\!UDMID!
+
+  !fct_trace! !msg_info! UDM ID : !UDMID!
+
+)
+
+ 
+
+ 
+
+if "!process_method!" == "--get_file_from_udm" (
+
+  set UDMID=!appli_env_letter_u!!--udm_id!
+
+  if not defined --target_path !fct_trace! !msg_error! Option --target_path is not defined&Goto:Usage
+
+  if not defined --file_mask !fct_trace! !msg_error! Option --file_mask is not defined&Goto:Usage
+
+  set --source_path=!appli_path!\data\in\!UDMID!
+
+)
+
+ 
+
+ 
+
+set --source_path=!--source_path:"=!
+
+ 
+
+ 
+
+call :f_IsFolder "!--source_path!"
+
+  if "!is_folder!" == "no" (
+
+  !fct_trace! !msg_error! !--source_path! folder does not exist, exiting...
+
+  exit /b 4
+
+)
+
+ 
+
+ 
+
+ 
+
+if not defined --target_path !fct_trace! !msg_error! Option --target_path not defined&Goto :Usage
+
+ 
+
+ 
+
+set --target_path=!--target_path:"=!
+
+call :f_IsFolder "!--target_path!"
+
+ 
+
+if "!is_folder!" == "no" (
+
+  !fct_trace! !msg_error! Target path !--target_path! is not present or is a file, exiting...
+
+  exit /b 4
+
+)
+
+ 
+
+if not exist "!--source_path!\!--file_mask!" (
+
+  !fct_trace! !message_on_file_not_present! No file match to "!--source_path!\!--file_mask!", exiting with status code !status_on_file_not_present!
+
+  exit /b !status_on_file_not_present!
+
+)
+
+ 
+
+dir "!--source_path!\!--file_mask!" | findstr /c:"               0 File(s)              0 bytes">nul&& !fct_trace! !message_on_file_not_present! No file match to "!--source_path!\!--file_mask!", exiting with status code !status_on_file_not_present!&&exit /b !status_on_file_not_present!
+
+ 
+
+ 
+
+:Get_File_Matching_To_Mask
+
+!fct_trace! !msg_info! Looking to files mathing to cmd: dir /b "!--source_path!\!--file_mask!"
+
+ 
+
+set /a source_file_count_matched=0
+
+ 
+
+  for /f "tokens=*" %%a in ('dir /b /O:D "%--source_path%\%--file_mask%"') do (
+
+ 
+
+  set latest_source_file=%%a
+
+  set /a source_file_count_matched+=1
+
+ 
+
+)
+
+ 
+
+call :f_set_absolute_path source_absolute_path "!--source_path!"
+
+call :f_set_absolute_path target_absolute_path "!--target_path!"
+
+ 
+
+ 
+
+ 
+
+!fct_trace! !msg_info! Source path: !--source_path!
+
+!fct_trace! !msg_info! Target path: !--target_path!
+
+!fct_trace! !msg_info! Option archive: !--archive!
+
+if !--archive!==yes !fct_trace! !msg_info! Option archive_path: !archive_path!
+
+!fct_trace! !msg_info! option Fail if file not present: !--fail_if_file_not_present!
+
+!fct_trace! !msg_info! file mask: !--file_mask!
+
+!fct_trace! !msg_info! transfer_only_most_recent_file: !--transfer_only_most_recent_file!
+
+!fct_trace! !msg_info! Source absolute path: !source_absolute_path!
+
+!fct_trace! !msg_info! Target absolute path: !target_absolute_path!
+
+!fct_trace! !msg_info! Latest source file name: !latest_source_file!
+
+ 
+
+ 
+
+ 
+
+if "!source_file_count_matched!" == "1" (
+
+  !fct_trace! !msg_info! !source_file_count_matched! file match to the mask !--source_path!\!--file_mask!
+
+  !fct_trace! !msg_info! latest file matching to mask: !latest_source_file!
+
+)
+
+ 
+
+if !source_file_count_matched! GTR 1 (
+
+  !fct_trace! !msg_info! !source_file_count_matched! files match to the mask !--source_path!\!--file_mask!
+
+  if defined --new_name set --transfer_only_most_recent_file=yes
+
+  if !--transfer_only_most_recent_file!==no !fct_trace! !msg_info! below files corrsponding to source file mask&!fct_exec! dir /b !--source_path!\!--file_mask!
+
+  if !--transfer_only_most_recent_file!==yes !fct_trace! !msg_info! Most recent file will be transfered: !latest_source_file!   
+
+)
+
+ 
+
+:Copy_Sub
+
+!fct_trace! !msg_info! ******************************
+
+!fct_trace! !msg_info! ***      Transfering       ***
+
+!fct_trace! !msg_info! ******************************
+
+ 
+
+if !--transfer_only_most_recent_file!==yes (
+
+  if defined --new_name !fct_exec! copy /y "!source_absolute_path!\!latest_source_file!" "!target_absolute_path!\!--new_name!"||exit /b 4
+
+  if not defined --new_name !fct_exec! copy /y "!source_absolute_path!\!latest_source_file!" "!target_absolute_path!"||exit /b 4
+
+ 
+
+) else (
+
+  if !source_file_count_matched! equ 1 (
+
+    if defined --new_name !fct_exec! copy /y "!source_absolute_path!\!latest_source_file!" "!target_absolute_path!\!--new_name!"||exit /b 4
+
+ 
+
+                if not defined --new_name !fct_exec! copy /y "!source_absolute_path!\!latest_source_file!" "!target_absolute_path!"||exit /b 4
+
+  ) else (
+
+    !fct_trace! !msg_info! copying !source_file_count_matched! files to !target_absolute_path!
+
+    for /f "tokens=*" %%a in ('dir /b "!source_absolute_path!\!--file_mask!"') do ( 
+
+                  set file_to_copy=%%a
+
+                  !fct_trace! !msg_info! copying "!source_absolute_path!\!file_to_copy!" to  "!target_absolute_path!"
+
+                  !fct_exec! copy /y "!source_absolute_path!\!file_to_copy!" "!target_absolute_path!"||exit /b 4
+
+                )
+
+  )
+
+)
+
+ 
+
+ 
+
+ 
+
+REM if !--transfer_only_most_recent_file!==yes !fct_exec! copy /y "!source_absolute_path!\!latest_source_file!" "!target_absolute_path!\!--latest_source_file!"||exit /b 4
+
+ 
+
+ 
+
+:Archive_sub
+
+if "!--archive!" == "yes" ( 
+
+  !fct_trace! !msg_info! ******************************
+
+  !fct_trace! !msg_info! ***     Archiving          ***
+
+  !fct_trace! !msg_info! ******************************
+
+  !fct_set_date_time!
+
+  if !source_file_count_matched! equ 1 (
+
+    if defined --new_name (
+
+                  !fct_exec! copy /y "!source_absolute_path!\!latest_source_file!" "!archive_path!\!--new_name!_!date_num!_!time_num!"||exit /b 5
+
+                ) else (
+
+                  if not defined --new_name !fct_exec! copy /y "!source_absolute_path!\!latest_source_file!" "!archive_path!\!latest_source_file!_!date_num!_!time_num!"||exit /b 5
+
+                )
+
+  )
+
+ 
+
+  if !source_file_count_matched! gtr 1 (
+
+    if !--transfer_only_most_recent_file!==yes (
+
+                 
+
+                  !fct_exec! copy /y "!source_absolute_path!\!latest_source_file!" "!archive_path!\!latest_source_file!_!date_num!_!time_num!"||exit /b 7
+
+                ) else (
+
+                  for /f "tokens=*" %%a in ('dir /b "!source_absolute_path!\!--file_mask!"') do (
+
+                    set file_to_archive=%%a
+
+                    !fct_trace! !msg_info! Archiving !source_absolute_path!\!file_to_archive! to  !archive_path!
+
+                    !fct_exec! copy /y "!source_absolute_path!\!file_to_archive!" "!archive_path!\!file_to_archive!_!date_num!_!time_num!"||exit /b 7
+
+                  )
+
+    )
+
+  )
+
+)
+
+ 
+
+ 
+
+:Delete_sub
+
+if "!--delete_source!" == "yes" (
+
+  !fct_trace! !msg_info! ******************************
+
+  !fct_trace! !msg_info! *** Deleting source files  ***
+
+  !fct_trace! !msg_info! ******************************
+
+  if !source_file_count_matched! equ 1 (
+
+    !fct_exec! del /q "!source_absolute_path!\!latest_source_file!"
+
+  )
+
+ 
+
+  if !source_file_count_matched! gtr 1 (
+
+    !fct_trace! !msg_info! Deleting !source_file_count_matched! files
+
+    for /f "tokens=*" %%a in ('dir /b "!source_absolute_path!\!--file_mask!"') do (
+
+                  set file_to_delete=%%a
+
+                  !fct_exec! del /q "!source_absolute_path!\!file_to_delete!"
+
+                )
+
+  )
+
+)
+
+ 
+
+set the_latest_source_file=!latest_source_file!
+
+endlocal&set latest_source_file=%the_latest_source_file%&Goto :EOF
+
+exit /b 0
+
+ 
+
+rem **********
+
+rem functions
+
+rem **********
+
+ 
+
+:check_option_archive
+
+  if "!--archive!" == "no" Goto :EOF
+
+  if "!--archive!" == "yes" Goto :EOF
+
+  !fct_trace! !msg_error! option --archive must be yes or no
+
+  call :Usage
+
+  exit /b 1
+
+endlocal& Goto :EOF
+
+ 
+
+ 
+
+:check_option_delete_source
+
+  if "!--delete_source!" == "no" Goto :EOF
+
+  if "!--delete_source!" == "yes" Goto :EOF
+
+  !fct_trace! !msg_error! option --delete_source must be yes or no
+
+  call :Usage
+
+  exit /b 1
+
+endlocal& Goto :EOF
+
+ 
+
+:check_option_fail_if_file_not_present
+
+  if "!--fail_if_file_not_present!" == "yes" (
+
+    set status_on_file_not_present=6
+
+                set message_on_file_not_present=!msg_error!
+
+                exit /b 0
+
+  )
+
+  if "!--fail_if_file_not_present!" == "no" (
+
+    set status_on_file_not_present=0
+
+                set message_on_file_not_present=!msg_warning!
+
+                exit /b 0
+
+  )
+
+  !fct_trace! !msg_error! option --fail_if_file_not_present must be yes or no
+
+ 
+
+  Goto :Usage
+
+  call /b 1
+
+endlocal& Goto :EOF
+
+ 
+
+:check_option_transfer_only_most_recent_file
+
+  if "!--transfer_only_most_recent_file!" == "no" Goto :EOF
+
+  if "!--transfer_only_most_recent_file!" == "yes" Goto :EOF
+
+  !fct_trace! !msg_error! option --fail_if_file_not_present must be yes or no
+
+  call :Usage
+
+  exit /b 1
+
+endlocal& Goto :EOF
+
+ 
+
+:f_set_absolute_path
+
+  set var=%1
+
+  set %var%=%~f2
+
+endlocal& Goto :EOF
+
+ 
+
+ 
+
+:f_IsFolder
+
+  set folder=%1
+
+  set _is_folder=no
+
+  REM pushd !folder! 2>nul&&popd&&set is_folder=yes
+
+  pushd !folder! 2>nul
+
+  if "%errorlevel%"=="0" (
+
+    popd
+
+                set _is_folder=yes
+
+  ) else (
+
+    set _is_folder=no
+
+  )
+
+endlocal&set is_folder=!_is_folder!&Goto :EOF
+
+ 
+
+ 
+
+:Usage
+
+echo.
+
+echo usage :
+
+echo.&echo Exposed methods by example
+
+echo   .\common\file_processor.cmd --copy_file --source_path .\data --file_mask file.csv --target_path e:\something
+
+echo   .\common\file_processor.cmd --push_file_to_udm --udm_id !APPLI_CODE!123 --source_path .\data
+
+echo   .\common\file_processor.cmd --get_file_from_udm --udm_id !APPLI_CODE!123 --target_path e:\MyApps\something
+
+echo.
+
+echo   Options
+
+echo     --archive yes^|no default=no
+
+echo     --archive_path e:\specific_arch_path
+
+echo     --delete_source yes^|no default=yes
+
+echo     --fail_if_file_not_present yes^|no default=yes
+
+echo     --new_name new_file_name_on_target                                                                                            
+
+echo     --transfer_only_most_recent_file yes^|no default=no
+
+echo.
+
+echo eg:
+
+echo   .\common\file_processor.cmd --copy_file --source_path .\data --file_mask Sinistres_SUSI_*.csv --target_path .\data\SUSI_extract
+
+echo   .\common\file_processor.cmd --get_file_from_udm --udm_id !APPLI_CODE!123 --target_path e:\MyApps\something --delete_source no
+
+echo   .\common\file_processor.cmd --push_file_to_udm --udm_id BISI123 --file_mask Sinistres_SUSI_* --source_path .\data --new_name Sinistres_SUSI.csv
+
+echo.
+
+echo remark:
+
+echo   If archive_path is set, the option --archive is concidered to yes
+
+echo   If the option --new_name is set, the option --transfer_only_most_recent_file is concidered to yes
+
+ 
+
+exit /b 1
+
+endlocal&Goto :EOF
+
+                                                                                                                                                                                                                                                                                                                                                                                    ./common/mail_sender.ps1                                                                            0000755 €    !Cý4001001 00000004125 14033633415 016756  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    param ( $body_file, $mail_to , $mail_from, $mail_cc , $body_text, $mail_subject )
+
+ 
+
+foreach($var in Get-ChildItem Env: ) { Set-Variable -name "$($var.name)" -value  "$($var.value)" }
+
+if ($appli_env -eq $null) { $script_name = $MyInvocation.MyCommand.Name ; $script_path = [System.IO.Path]::GetDirectoryName($MyInvocation.MyCommand.Definition) ; write-host "Environment should be loaded first!, play the command below: :`n$script_path\..\common\set_env.cmd" ; exit 1}
+
+. $env:appli_path\common\ops_functions.ps1
+
+ 
+
+# write-host debug mail_subject: $mail_subject
+
+$encoding=[System.Text.Encoding]::UTF8
+
+if ( -not ($body_text -eq $null)) {
+
+                if ( -not ($body_file -eq $null)) { fct_trace "[ERROR] paramaeeter or variables body_text and body_file can't be set together" ; exit 1 }
+
+                $body_file = "${appli_path}\data\mail_body_$(random).txt"
+
+                # echo debug "body_file: $body_file"
+
+                If (Test-Path "$body_file") { Remove-Item -Path "$body_file" }
+
+                ADD-content -path $body_file -value "$body_text"
+
+}
+
+ 
+
+$body = cat $body_file -Raw
+
+$body = . ${appli_path}\common\templator.ps1 -input_str $body
+
+$mail_subject = . ${appli_path}\common\templator.ps1 -input_str "$mail_subject"
+
+# $new_subject | Out-String
+
+ 
+
+ 
+
+ 
+
+# write-host "send_mail_cmd: Send-MailMessage -To $mail_to -Subject $mail_subject -from $mail_from -Body $body -SmtpServer $mail_smtp_server -Encoding utf8"
+
+# Send-MailMessage -To $mail_to -Subject $mail_subject -from $mail_from -Body $body -SmtpServer $mail_smtp_server -Encoding utf8
+
+$mail_cmd="Send-MailMessage -To $mail_to -Subject $mail_subject -from $mail_from -Body $body -SmtpServer $mail_smtp_server -Encoding $encoding"
+
+Send-MailMessage -To $mail_to -Subject $mail_subject -from $mail_from -cc $mail_cc -Body $body -SmtpServer $mail_smtp_server -Encoding $encoding
+
+fct_trace "mail_cmd: $mail_cmd"
+
+# $mail_cmd
+
+ 
+
+if ( -not ($body_text -eq $null)) { If (Test-Path "$body_file") { Remove-Item -Path "$body_file" } }
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                           ./common/ops_framework_installer.cmd                                                                0000755 €    !Cý4001001 00000002401 14022661315 021460  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    @echo off
+
+ 
+
+Setlocal EnableDelayedExpansion
+
+call %~dp0\..\common\set_env.cmd %~dp0%~n0
+
+ 
+
+!fct_set_date_time!
+
+set backup_file_list=!appli_path!\ops\backup_file_list_!date_num!_!time_num!.txt
+
+set backup_file_zip=!appli_path!\ops\backup_file_list_!date_num!_!time_num!.zip
+
+ 
+
+if exist !backup_file_list! del /q !backup_file_list!
+
+ 
+
+for /f %%a in ('dir /b !appli_path!\scripts ^| findstr /r "^^!appli_env_letter_u!....-[0-9][0-9][0-9][A-Za-z]-[0-9][0-9][0-9][A-Za-z].bat$"') do (
+
+  set existing_wrapper_name=%%a
+
+  findstr /c:"tws_wrapper windows v" !appli_path!\scripts\!existing_wrapper_name!>nul
+
+  if !errorlevel! == 0 (
+
+                fc !appli_path!\scripts\tws_wrapper.bat !appli_path!\scripts\!existing_wrapper_name!>nul
+
+                if not !errorlevel! == 0 (
+
+                  echo !appli_path!\scripts\!existing_wrapper_name!>>!backup_file_list!
+
+                )
+
+  )
+
+)
+
+ 
+
+if not exist !backup_file_list! !fct_trace! !msg_info! nothing to change, exiting && exit /b 0
+
+ 
+
+echo debug zip cmd : %fct_exec% %zip% a -tzip !backup_file_zip! @!backup_file_list!
+
+%fct_exec% %zip% a -tzip !backup_file_zip! @!backup_file_list! || exit /b 5
+
+ 
+
+for /f %%a in ('type !backup_file_list!') do (
+
+  set existing_wrapper_name=%%a
+
+  !fct_exec! copy /y !appli_path!\scripts\tws_wrapper.bat !existing_wrapper_name! || exit /b 3
+
+)
+
+ 
+
+                                                                                                                                                                                                                                                               ./common/ops_functions.ps1                                                                          0000755 €    !Cý4001001 00000001525 13766351550 017377  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    #
+
+# 16/12/2020 - ops_function.ps1 - Version 1.0
+
+#
+
+ 
+
+ 
+
+#
+
+# Begin - get environment variables
+
+#
+
+ 
+
+$_msg_debug = $env:msg_debug
+
+$_msg_info = $env:msg_info
+
+$_msg_error = $env:msg_error
+
+$_msg_exec = $env:msg_exec
+
+$_msg_warning = $env:msg_warning
+
+$_msg_success = $env:msg_success
+
+ 
+
+#
+
+# End - get environment variables
+
+#
+
+ 
+
+Function ExitScript($_ExitCode)
+
+{
+
+fct_trace("$_msg_info - End script with Code Status : $_ExitCode")
+
+Exit $_ExitCode
+
+}
+
+ 
+
+Function fct_trace($_MessageToWrite)
+
+{
+
+$_Date=(get-date -format "yyyyMMdd")
+
+$_Time=(get-date -format "HHmmss")
+
+Write-Host $_Date $_Time (Get-Item $PSCommandPath).Name $_MessageToWrite
+
+}
+
+ 
+
+Function DateDiff($StartDateTime, $TimeOut)
+
+{
+
+$_DeltaTime = [math]::Round($TimeOut - (New-TimeSpan -Start (Get-date -Date $StartDateTime) -End (Get-Date)).TotalSeconds)
+
+Return $_DeltaTime
+
+}
+
+                                                                                                                                                                           ./common/service_manager.ps1                                                                        0000755 €    !Cý4001001 00000022512 13766350226 017636  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    #
+
+# 16/12/2020 - service_manager.ps1 - Version 1.0
+
+#
+
+ 
+
+. $env:appli_path\common\ops_functions.ps1
+
+ 
+
+$_ServiceToManage = ""
+
+$_Id_ProcessService = 0
+
+$_TimeWait = 5
+
+$_CptLoop = 0
+
+$_ActionToDo = ""
+
+$_TimeOut = 30
+
+ 
+
+$_ReturnCode_ParameterNotSpecified = 1
+
+$_ReturnCode_ServiceToManageNotFound = 2
+
+$_ReturnCode_ParameterValueWrong = 3
+
+$_ReturnCode_ParameterValueNotSpecified = 4
+
+$_ReturnCode_ParameterNumericValueExpected = 5
+
+$_ReturnCode_ParameterUnknownParameter = 6
+
+$_ReturnCode_Success = 0
+
+$_ReturnCode_Failure = 999
+
+ 
+
+#
+
+# Begin - Functions
+
+#
+
+ 
+
+Function Usage
+
+{
+
+Write-Host "usage:"
+
+Write-Host "$((Get-Item $PSCommandPath).Name) -ActionToDo<:| ><Start|Stop> -ServiceName<:| ><Service Name> [-Timeout<:| ><Timeout Value in seconds)] [-TimeWait<:| ><TimeWait Value in seconds>]"
+
+Write-host ""
+
+Write-Host "Parameters"
+
+Write-Host "----------"
+
+Write-Host ""
+
+Write-Host "-ActionToDo (Mandatory) - Start|Stop : To start or stop a service"
+
+Write-Host "-ServiceName (Mandatory) - Service Name on which to perform the action"
+
+Write-Host ""
+
+Write-Host "-Timeout (optional) - value for timeout in seconds if action to do not respond in a timely fashion  - Default value : 30 seconds"
+
+Write-Host "-TimeWait (Optional) -value for time wait in seconds in loop - Default value : 30 seconds"
+
+Write-Host ""
+
+Write-Host "example"
+
+Write-Host "-------"
+
+Write-Host "$((Get-Item $PSCommandPath).Name) -ActionToDo:Start -ServiceName:ServiceName -Timeout:60 -TimeWait:10"
+
+Write-Host ""
+
+Write-Host ""
+
+}
+
+Function ServiceExist($_ServiceName)
+
+{
+
+If (Get-Service $_ServiceName -ErrorAction SilentlyContinue) {
+
+  Return $True
+
+} Else {
+
+  Return $False
+
+}
+
+}
+
+Function GetInfoService($_ServiceName)
+
+{
+
+$_ServiceProperties = (Get-WmiObject -Class Win32_Service -Property StartMode -Filter "Name = '$_ServiceName'")
+
+$_ServiceName = Get-Service $_ServiceName
+
+fct_trace("$_msg_info - Service Status : $($_ServiceName.Status)")
+
+fct_trace("$_msg_info - Display Name : $($_ServiceName.DisplayName)")
+
+fct_trace("$_msg_info - Startup Type : $($_ServiceProperties.StartMode)")
+
+Return $_ServiceName
+
+}
+
+ 
+
+Function GetProcessIDFromService($_ServiceName)
+
+{
+
+$_Id_Tmp = (Get-WmiObject -Class Win32_Service -Filter "Name = '$_ServiceName'").ProcessID
+
+Return $_Id_Tmp
+
+}
+
+ 
+
+Function StopService($_ServiceName)
+
+{
+
+$_ExitLoopStopSvc = $False
+
+$_StartDateTimeStopService = (Get-Date)
+
+$_Id_ProcessService = GetProcessIDFromService($_ServiceName)
+
+fct_trace("$_msg_info - Service Process ID : $_Id_ProcessService")
+
+Stop-Service -Name $_ServiceName -NoWait
+
+fct_trace("$_msg_info - Stop request done")
+
+Do
+
+ {
+
+  If ((Get-Process -Id $_Id_ProcessService -ErrorAction SilentlyContinue).Id) {
+
+   $_CptLoop++
+
+   fct_trace("$_msg_info - Service Process ID $_Id_ProcessService running")
+
+   fct_trace("$_msg_info - Wait $_TimeWait Seconds (Pass $_CptLoop) for the process to stop.")
+
+   Start-Sleep -Seconds $_TimeWait
+
+   If ((DateDiff -StartDateTime $_StartDateTimeStopService  -TimeOut $_TimeOut) -le 0) {
+
+    fct_trace("$_msg_error - Timeout ($_TimeOut) exceeded.")
+
+    $_CodeRetourStopService = $False
+
+                  $_ExitLoopStopSvc = $True
+
+   }
+
+  }
+
+  Else {
+
+   $_ServiceTMP = GetInfoService($_ServiceName)
+
+   $_CodeRetourStopService = $True
+
+   $_ExitLoopStopSvc = $True
+
+  }
+
+}
+
+While (-Not $_ExitLoopStopSvc)
+
+Return $_CodeRetourStopService
+
+}
+
+ 
+
+Function StartService($_ServiceName)
+
+{
+
+  $_ExitLoopStartSvc = $False
+
+  $_StartDateTimeStartService = (Get-Date)
+
+  Start-Service -Name $_ServiceName
+
+  $_ServiceTMP = GetInfoService($_ServiceToManage)
+
+  Do
+
+  {
+
+    If ($_ServiceTmp.Status -ne "Running") {
+
+      $_CptLoop++
+
+      fct_trace("$_msg_info - Wait $_TimeWait Seconds (Pass $_CptLoop) for the process to start.")
+
+      Start-Sleep -Seconds $_TimeWait
+
+      If ((DateDiff -StartDateTime $_StartDateTimeStartService  -TimeOut $_TimeOut) -le 0) {
+
+        fct_trace("$_msg_error - Timeout ($_TimeOut) exceeded.")
+
+        $_CodeRetourStartService = $False
+
+        $_ExitLoopStartSvc = $True
+
+      }
+
+    }
+
+    Else {
+
+      $_Id_ProcessService = GetProcessIDFromService($_ServiceName)
+
+      fct_trace("$_msg_info - Service Process ID : $_Id_ProcessService")
+
+      $_CodeRetourStartService = $True
+
+      $_ExitLoopStartSvc = $True
+
+    }
+
+  }
+
+  While (-Not $_ExitLoopStartSvc)
+
+  Return $_CodeRetourStartService
+
+}
+
+ 
+
+#
+
+# End Functions
+
+#
+
+ 
+
+#
+
+# Begin - Check parameters
+
+#
+
+ 
+
+if ($args.count -eq 0) {
+
+  fct_trace("$_msg_error - Parameters NOT specified")
+
+  Usage
+
+  ExitScript($_ReturnCode_ParameterNotSpecified)
+
+}
+
+else {
+
+  $_CptArg = 0
+
+  $_ExitLoopPara = $False
+
+  Do
+
+  {
+
+    $_Para_Key = ($args[$_CptArg].ToString()).ToLower()
+
+    If ($_Para_Key.Substring(($_Para_Key.Length - 1),1) -eq ":") {$_Para_Key = $_Para_Key.Substring(0,($_Para_Key.Length - 1))}
+
+    switch ($_Para_Key)
+
+    {
+
+      "-actiontodo"
+
+      {
+
+        $_CptArg++
+
+        if ($_CptArg -gt $args.count) {
+
+          fct_trace("$_msg_error - Value parameter NOT specified ")
+
+          usage
+
+          ExitScript($_ReturnCode_ParameterValueNotSpecified)
+
+        }
+
+        $_Para_Value = ($args[$_CptArg].ToString()).ToLower()
+
+        if (($_Para_Value -ne "start") -and ($_Para_Value -ne "stop")) {
+
+          fct_trace("$_msg_error - incorrect parameter value `"$_Para_Value`" ")
+
+          usage
+
+          ExitScript($_ReturnCode_ParameterValueWrong)
+
+        }
+
+        else {
+
+          $_ActionToDo = $_Para_Value
+
+        }
+
+      }
+
+      "-servicename"
+
+      {
+
+        $_CptArg++
+
+        if ($_CptArg -gt $args.count) {
+
+          fct_trace("$_msg_error - Value parameter NOT specified ")
+
+          usage
+
+          ExitScript($_ReturnCode_ParameterValueNotSpecified)
+
+        }
+
+        $_ServiceToManage = $args[$_CptArg].ToString()
+
+      }
+
+      "-timeout"
+
+      {
+
+        $_CptArg++
+
+        if ($_CptArg -gt $args.count) {
+
+          fct_trace("$_msg_error - Value parameter NOT specified ")
+
+          usage
+
+          ExitScript($_ReturnCode_ParameterValueNotSpecified)
+
+        }
+
+        $_Para_Value = $args[$_CptArg]
+
+        if ($_Para_Value -match "^\d+$") {
+
+          $_TimeOut = $_Para_Value
+
+        }
+
+        else {
+
+          fct_trace("$_msg_error - Numeric value for Timeout expected `"$_Para_Value`"")         
+
+          usage
+
+          ExitScript($_ReturnCode_ParameterNumericValueExpected)
+
+        }
+
+      }
+
+      "-timewait"
+
+      {
+
+        $_CptArg++
+
+        if ($_CptArg -gt $args.count) {
+
+          fct_trace("$_msg_error - Value parameter NOT specified ")
+
+          usage
+
+          ExitScript($_ReturnCode_ParameterValueNotSpecified)
+
+        }
+
+        $_Para_Value = $args[$_CptArg]
+
+        if ($_Para_Value -match "^\d+$") {
+
+          $_TimeWait = $_Para_Value
+
+        }
+
+        else {
+
+          fct_trace("$_msg_error - Numeric value for Timeout expected `"$_Para_Value`"")         
+
+          usage
+
+          ExitScript($_ReturnCode_ParameterNumericValueExpected)
+
+        }
+
+      }
+
+      default
+
+      {
+
+        fct_trace("$_msg_error - Unknown parameter `"$_Para_Key`"")
+
+        usage
+
+        ExitScript($_ReturnCode_ParameterUnknownParameter)
+
+      }
+
+    }
+
+    $_CptArg++
+
+    if ($_CptArg -eq $args.count) {$_ExitLoopPara = $True}
+
+  }
+
+  While (-Not $_ExitLoopPara)
+
+  if ($_ActionToDo -eq "") {
+
+    fct_trace("$_msg_error - Parameter `"-ActionToDo`" expected")         
+
+    usage
+
+    ExitScript($_ReturnCode_ParameterNotSpecified)   
+
+  }
+
+  if ($_ServiceToManage -eq "") {
+
+    fct_trace("$_msg_error - Parameter `"-ServiceName`" expected")         
+
+    usage
+
+    ExitScript($_ReturnCode_ParameterNotSpecified)   
+
+  }
+
+}
+
+ 
+
+#
+
+# End - Check parameters
+
+#
+
+ 
+
+# Write-host "`$_ServiceToManage : $_ServiceToManage"
+
+# Write-Host "`$_ActionToDo : $_ActionToDo"
+
+# Write-Host "`$_TimeOut : $_TimeOut"
+
+# Write-Host "`$_TimeWait : $_TimeWait"
+
+ 
+
+# ExitScript(999)
+
+ 
+
+ 
+
+ 
+
+ 
+
+If ( -Not (ServiceExist($_ServiceToManage)) ) {
+
+fct_trace("$_msg_error - Service $_ServiceToManage not found")
+
+ExitScript($_ReturnCode_ServiceToManageNotFound)
+
+}
+
+ 
+
+ 
+
+ 
+
+Switch ($_ActionToDo)
+
+{
+
+  "start"
+
+  {
+
+    $_ServiceTMP = GetInfoService($_ServiceToManage)
+
+    If ($_ServiceTMP.Status -eq "Running") {
+
+      fct_trace("$_msg_warning - service $_ServiceToManage already started")
+
+      ExitScript($_ReturnCode_success)
+
+    }
+
+                  Else {
+
+                    If (StartService($_ServiceToManage)) {
+
+        fct_trace("$_msg_success - Start service $_ServiceToManage")
+
+        ExitScript($_ReturnCode_Success)
+
+      }
+
+      Else {
+
+        fct_trace("$_msg_error - Start service $_ServiceToManage failed")
+
+        ExitScript($_ReturnCode_Failure)
+
+      }
+
+    }
+
+  }
+
+  "stop"
+
+  {
+
+    $_ServiceTMP = GetInfoService($_ServiceToManage)
+
+    If (($_ServiceTMP.Status -eq "Running") -or ($_ServiceTMP.Status -eq "Paused") -or ($_ServiceTMP.Status -eq "StartPending") -or ($_ServiceTMP.Status -eq "StopPending")) {
+
+      If (StopService($_ServiceToManage)) {
+
+        fct_trace("$_msg_success - Stop service $_ServiceToManage")
+
+        ExitScript($_ReturnCode_Success)
+
+      }
+
+      Else {
+
+        fct_trace("$_msg_error - Stop service $_ServiceToManage failed")
+
+        ExitScript($_ReturnCode_Failure)
+
+      }
+
+    }
+
+    Else {
+
+      If ($_ServiceTMP.Status -eq "Stopped") {
+
+        fct_trace("$_msg_info - Service $_ServiceToManage already stopped")
+
+                      ExitScript($_ReturnCode_Success)
+
+                    }
+
+                    Else {
+
+                      fct_trace("$_msg_error - Unmanaged status")
+
+                      ExitScript($_ReturnCode_Failure)
+
+                    }
+
+    }
+
+  }
+
+}
+
+                                                                                                                                                                                      ./common/set_env.cmd                                                                                0000755 €    !Cý4001001 00000006145 14033326247 016205  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    @@if "%1" == "" (
+
+  @echo off
+
+  set ops_exec_mode=user
+
+) else (
+
+  set ops_exec_mode=batch
+
+)
+
+ 
+
+if %ops_exec_mode% == user (
+
+  set script_name_full_path=%~dp0%~n0%~x0
+
+) else (
+
+  set script_name_full_path=%*
+
+)
+
+ 
+
+set appli_env=%script_name_full_path:~3,4%
+
+if /i "%appli_env%"=="devl" ( set appli_env=devl&&set appli_env_u=DEVL&&set appli_env_letter=d&&set appli_env_letter_u=D&&Goto :Main )
+
+if /i "%appli_env%"=="intg" ( set appli_env=intg&&set appli_env_u=INTG&&set appli_env_letter=i&&set appli_env_letter_u=I&Goto :Main )
+
+if /i "%appli_env%"=="pprd" ( set appli_env=pprd&&set appli_env_u=PPRD&&set appli_env_letter=t&&set appli_env_letter_u=T&&Goto :Main )
+
+if /i "%appli_env%"=="prod" ( set appli_env=prod&&set appli_env_u=PROD&&set appli_env_letter=p&&set appli_env_letter_u=P&&Goto :Main )
+
+ 
+
+echo [ERROR   ] working on an unkown path in e:\devl, e:\intg, e:\pprd, E:\prod
+
+exit /b 2
+
+ 
+
+:Main
+
+ 
+
+::Dynamics variables reloaded each times if set_end.cmd is called
+
+set appli_code=%script_name_full_path:~8,4%
+
+for /f %%a in ('powershell ^(echo %appli_code%^).ToUpper^(^)') do set appli_code_u=%%a
+
+for /f %%a in ('powershell ^(echo %appli_code%^).ToLower^(^)') do set appli_code=%%a
+
+REM for /f %%a in ('powershell (echo %appli_code%).ToLower) do set appli_code=%%a
+
+ 
+
+REM set appli_code_u=%appli_code%
+
+set appli_path=%script_name_full_path:~0,12%
+
+set common_path=%appli_path%\common
+
+set specific_env_file=%appli_path%\par\%appli_code%_env.cmd
+
+ 
+
+set appli_drive_letter=%appli_path:~0,1%
+
+ 
+
+ 
+
+set fct_set_date_time=call %common_path%\fct_set_date_time.cmd
+
+set fct_trace=call %common_path%\fct_trace.cmd
+
+set fct_exec=call %common_path%\fct_exec.cmd
+
+ 
+
+ 
+
+::Default variable value that might be over loaded
+
+if not defined msg_debug set msg_debug=[DEBUG   ]
+
+if not defined msg_info set msg_info=[INFO    ]
+
+if not defined msg_error set msg_error=[ERROR   ]
+
+if not defined msg_exec set msg_exec=[EXEC    ]
+
+if not defined msg_warning set msg_warning=[WARNING ]
+
+if not defined msg_success set msg_success=[SUCCESS ]
+
+if not defined zip_path set zip_path="C:\Program Files\7-Zip"
+
+if not defined zip set zip="%zip_path:"=%\7z.exe"
+
+if not defined ops_bin_path set ops_bin_path=e:\ops_bin
+
+if not defined archive_path set archive_path=!appli_path!\data\archive
+
+ 
+
+chcp 1252>nul
+
+ 
+
+if %appli_env%==prod (
+
+  set default_mail_smtp_server=vip.stmp.somewhere
+
+) else (
+
+  set default_mail_smtp_server=vip.stmp.somewhere_helse
+
+)
+
+ 
+
+ 
+
+if not defined mail_smtp_server set mail_smtp_server=%default_mail_smtp_server%
+
+ 
+
+ 
+
+ 
+
+set shadow_file=%appli_drive_letter%:\%appli_env%\.%appli_env_letter%_%appli_code%_shadow.txt
+
+if not exist %shadow_file% Goto :bypass_shadow
+
+ 
+
+for /f "tokens=*" %%a in ('type %shadow_file%') do (
+
+  set %%a
+
+)
+
+ 
+
+ 
+
+:bypass_shadow
+
+%fct_set_date_time%
+
+ 
+
+ 
+
+if /i exist %specific_env_file% call %specific_env_file%
+
+ 
+
+set caller=%~n1
+
+ 
+
+ 
+
+if %ops_exec_mode% == user (
+
+echo the variables below are set for you
+
+echo.
+
+set | findstr /r "^appli_ ^mail_ ^msg_ ^shadow_file ^fct_"
+
+ 
+
+)                                                                                                                                                                                                                                                                                                                                                                                                                           ./common/templator.ps1                                                                              0000755 €    !Cý4001001 00000004623 14022204420 016472  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    param ( $template_file, $out_file , [string]$input_str )
+
+ 
+
+ 
+
+# write-host "debug template_file: $template_file, out_file: $out_file, input_str: `"${input_str}`""
+
+ 
+
+ 
+
+foreach($var in Get-ChildItem Env: ) { Set-Variable -name "$($var.name)" -value  "$($var.value)" }
+
+if ($appli_env -eq $null) { $script_name = $MyInvocation.MyCommand.Name ; $script_path = [System.IO.Path]::GetDirectoryName($MyInvocation.MyCommand.Definition) ; write-host "Environment should be loaded first!, play the command below: :`n$script_path\..\common\set_env.cmd" ; exit 1}
+
+. $env:appli_path\common\ops_functions.ps1
+
+ 
+
+if ($hostname -eq $null) { $hostname=$(hostname) }
+
+$var=$env:var
+
+ 
+
+function Expand-String() {
+
+    Param(
+
+        [Parameter(Position = 1,ValueFromPipeline = $true)]
+
+        [string] $Template
+
+    )
+
+               
+
+                $preparedTemplate = $Template
+
+               
+
+                if ($input_str -eq "" ) {
+
+                               # write-host debug input_str: $input_str
+
+                               $special=[char]96
+
+                               $preparedTemplate = $preparedTemplate.replace("$special", '``')
+
+                }
+
+                $preparedTemplate = $preparedTemplate.replace('$', '`$')
+
+                $preparedTemplate = $preparedTemplate -replace '{{([^}{]*)}}' , '$${$1}'
+
+                # $preparedTemplate = $preparedTemplate -replace '${var}' , 'jack'
+
+                # $preparedTemplate = $preparedTemplate -replace '\\n' , '`n'
+
+                # write-host "debug preparedTemplate: $preparedTemplate"
+
+               
+
+ 
+
+    return $ExecutionContext.InvokeCommand.ExpandString($preparedTemplate);
+
+}
+
+ 
+
+ 
+
+if ( -Not ($input_str -eq "" )) {
+
+                # write-host "on part sur l'entree str: $input_str"
+
+                $new_line = Expand-String "$input_str"
+
+                # write-host "$new_line"
+
+                return "$new_line"
+
+ 
+
+ 
+
+} else {
+
+ 
+
+ 
+
+                $tmp_file = "${out_file}_tmp"
+
+                If (-Not ( Test-Path "$template_file")) { write-host "$msg_error $template_file not found" ; exit 2 }
+
+                If (Test-Path "$tmp_file") { Remove-Item -Path "$tmp_file" }
+
+ 
+
+                foreach($line in Get-Content $template_file) {
+
+                               $new_line = Expand-String "$line"
+
+                               echo "debug new_line: $new_line"
+
+                               ADD-content -path $tmp_file -value $new_line
+
+                }
+
+ 
+
+ 
+
+                If (-Not ( Test-Path "$out_file")) {
+
+                               write-host "$msg_info $out_file dosen't exist"
+
+                               Copy-Item $tmp_file $out_file
+
+                } else {
+
+                               write-host "c'est parti pour la suite"
+
+                               if(Compare-Object -ReferenceObject $(Get-Content $tmp_file) -DifferenceObject $(Get-Content $out_file)) {
+
+                                               write-host "$tmp_file is diffrent from $out_file"
+
+                                               Copy-Item $tmp_file $out_file
+
+                               } else {
+
+                                               fct_trace "$msg_info nothing to change in $out_file"
+
+                               }
+
+                }
+
+}
+
+                                                                                                             ./ops/                                                                                              0000755 €    !Cý4001001 00000000000 14035051072 013346  5                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    ./ops/ops_framework_windows_v1.48_X.txt                                                             0000755 €    !Cý4001001 00000000614 14034012660 021671  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    .\ops\package_builder.cmd
+
+.\ops\tws_wrapper_renamer.cmd
+
+.\common\fct_exec.cmd
+
+.\common\fct_set_date_time.cmd
+
+.\common\fct_trace.cmd
+
+.\common\file_processor.cmd
+
+.\common\set_env.cmd
+
+.\common\templator.ps1
+
+.\common\service_manager.ps1
+
+.\common\ops_functions.ps1
+
+.\scripts\tws_wrapper.bat
+
+.\common\ops_framework_installer.cmd
+
+.\common\mail_sender.ps1
+
+.\ops_framework_windows_v1.48.txt
+
+                                                                                                                    ./ops/package_builder.cmd                                                                           0000755 €    !Cý4001001 00000005035 14001246102 017133  0                                                                                                    ustar   johny                         Utilisa. du domaine                                                                                                                                                                                                    @echo off
+
+setlocal EnableExtensions EnableDelayedExpansion
+
+ 
+
+echo.&!fct_trace! !msg_info! package_builder.cmd version 1.00
+
+ 
+
+call %~dp0..\common\set_env.cmd %~dp0%~n0
+
+ 
+
+echo debug zip_pa
