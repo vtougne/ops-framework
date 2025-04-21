@@ -20,3 +20,5 @@ f_exec() {
     return $rc
   fi
 }
+
+# echo coucocu from function

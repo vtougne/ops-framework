@@ -8,7 +8,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    user: lab_user
+    # user: lab_user
+    user: "0:0" 
     environment:
       - PYTHONDONTWRITEBYTECODE=1
     command:
@@ -17,18 +18,13 @@ services:
       - |
         tail -f
     volumes:
-      # - ../ops_framework:/project/ops_frameworks
-      - ./ops-framework-linux:/project/ops_framework
+      - ./ops-framework:/repo/ops-framework
+      - ./project-sample:/apps/dev/project-sample
 
-  webrepo:
-    image: nginx
-    command: |
-        bash -c "
-        cp /conf/nginx.conf /etc/nginx/nginx.conf
-        nginx -g 'daemon off;'
-        "
-    volumes:
-      - ./conf/nginx.conf:/conf/nginx.conf
-      - ./local:/usr/share/nginx/html
+  artifactory:
+    build: ./artifactory
+    container_name: artifactory
     ports:
-      - "8082:80"
+      - "8082:8082"
+    volumes:
+      - ./artifactory:/app
