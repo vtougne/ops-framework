@@ -7,6 +7,7 @@ RUN echo "lab_user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 USER lab_user
 
 RUN sudo apt-get install -y pip curl less git iputils-ping
+RUN sudo apt-get install -y vim
     # pip install ansible-core==2.16 \
     # pip install jmespath \
     # ansible-galaxy collection install community.general ansible.posix \

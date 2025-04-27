@@ -9,9 +9,14 @@
 
 # f_log info the_secret: $the_secret
 # export the_name=vince
-f_log info "should be masked:  {{ the_password }}"
-echo "debug should be clear:         $the_password"
-f_template "from template should be clear: {{ the_password }}"
+f_log info "coucou {{ the_password }}"
+# f_exec hostname || exit $?
+
+# f_log info continue
+
+# >&2 echo "wrting somthing on stderr "
+
+# f_log info continue
 
 # >&2 printf "starting\n"
 # >&1 echo something
