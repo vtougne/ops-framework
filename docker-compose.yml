@@ -9,7 +9,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # user: lab_user
-    user: "0:0" 
+    # user: "0:0" 
     environment:
       - PYTHONDONTWRITEBYTECODE=1
     command:

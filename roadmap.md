@@ -22,8 +22,8 @@ gantt
     title Roadmap de développement - ops_framework
     dateFormat  YYYY-MM-DD
     section Framework Shell
-    Développement de base         :done, 2025-03-01, 2025-04-01
-    Projets pilotes               :done, 2025-03-01, 2025-04-25
+    Développement de base         :done, 2025-04-01, 2025-04-01
+    Projets pilotes               :done, 2025-04-01, 2025-05-01
     Documentation                 :active, 2025-04-15, 2025-05-15
     Packaging standardisé         :active, 2025-04-15, 2025-05-15
 

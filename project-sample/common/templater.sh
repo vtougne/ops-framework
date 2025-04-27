@@ -33,5 +33,14 @@ export IFS="
 # f_log info expanded_string "$(f_escape_shell_string "$@")"
 
 for line in $(f_escape_shell_string "$@") ; do
-  eval "echo $line"
+  # prepared_string=$(f_escape_shell_string "$line")
+  eval "echo -e $line"
+  # echo "$line"
+  # eval "echo -e \"$line\""
 done
+
+# for line in `cat -n $template_file` ; do
+#   prepared_string=$(f_escape_shell_string "$line")
+#   new_str=`eval "echo -e $prepared_string"`
+#   echo "$new_str">>$tmp_target_file
+# done

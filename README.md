@@ -1,6 +1,11 @@
 # ops_framework
 
-Framework d'accompagnement DevOps pour équipes opérationnelles
+# Create project
+```bash
+mkdir <env>/<project>
+cd <env>/<project>
+curl artifactory:8082/ops-framework-repo.tar.gz --output - | gunzip - | tar xvf -
+```
 
 ## Application immédiates
 
@@ -26,8 +31,8 @@ Il est compatbible sur les plateformes linux, AIX, ainsi que l'émulateur Linux 
 
 Chaque projet initialise le framework via un script unique :
 
-```sh
-source ops_framework/setup.sh
+```bash
+source ops_framework/set_env.sh
 ```
 
 Le framework lit automatiquement le dictionnaire de propriétés lié au projet pour configurer les fonctionnalités activées.
@@ -59,7 +64,3 @@ Des contributeurs motivés sont invités à rejoindre le projet :
 ## Feuille de route
 
 ➡️ Voir [roadmap.md](./roadmap.md)
-
----
-
-*Projet initié dans le cadre de la transformation DevOps de l'équipe OPS.*
