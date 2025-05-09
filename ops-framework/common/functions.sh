@@ -102,6 +102,22 @@ function f_load_var_file {
     secret_keys=$(echo $secret_keys | sed 's/^;//g')
 }
 
+f_running_platform() {
+  local uname_return
+  uname_return=$(uname -s)
+  case "$uname_return" in
+    Linux*)     echo "Linux";;
+    Darwin*)    echo "Mac";;
+    CYGWIN*)    echo "Cygwin";;
+    MINGW*)     echo "MinGW";;
+    *)          echo "Unknown: $uname_return";;
+  esac
+}
+f_running_context() {
+  local running_platform
+  [[ $running_platform == MINGW64* ]] && echo "Git Bash"
+}
+
 f_template() { $ops_common_path/templater.sh "$@"; }
 
 read_from_pipe() { read "$@" <&0; }

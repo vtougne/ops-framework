@@ -1,0 +1,17 @@
+---
+
+
+
+schedule:
+  name: send_data_to_partners
+  start_time: 2023-10-01T00:00:00Z
+  jobs:
+    - name: extract_data
+      cmd: f_extrator --scope = partners --out = {{ OPS_DATA_PATH }}/extracted_data.json
+      on_error: fail
+    - name: transform_data
+      cmd: f_file_processor --in = {{ OPS_DATA_PATH }}/extracted_data.json --out = {{ OPS_DATA_PATH }}/transformed_data.json --encrypt-key = {{ OPS_ENCRYPTION_KEY }}
+      depnds_to: extract_data
+    - name: send_data_2_partners
+      cmd: f_file_sender --in = {{ OPS_DATA_PATH }}/transformed_data.json --out = {{ OPS_DATA_PATH }}/sent_data.json --provider = partners
+      depnds_to: extract_data
