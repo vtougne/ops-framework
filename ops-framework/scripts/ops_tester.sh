@@ -12,6 +12,10 @@
 f_log info "should be masked:  {{ the_password }}"
 echo "debug should be clear:         $the_password"
 f_template "from template should be clear: {{ the_password }}"
+f_template "template var OPS_INSTANCE_NAME: {{ OPS_INSTANCE_NAME }}"
+
+f_exec hostname
+f_exec hostnamedsz
 
 # >&2 printf "starting\n"
 # >&1 echo something
