@@ -22,7 +22,9 @@ function f_escape_shell_string {
   str=`echo $str | sed 's/#/\\\\#/g'`
   str=`echo $str | sed 's/\`/\\\\\`/g'`
   # str=`echo $str | sed 's/{{\([^}{]*\)}}/\${\1}/g'`
-  str=`echo $str | sed 's/{{[[:space:]]*\([^{}[:space:]]\+\)[[:space:]]*}}/${\1}/g'`
+  # str=`echo $str | sed 's/{{[[:space:]]*\([^{}[:space:]]\+\)[[:space:]]*}}/${\1}/g'`
+  str=`echo $str | sed 's/{{[ ]*\([^{} ]\+\)[ ]*}}/${\1}/g'
+
   echo "$str"
 }
 

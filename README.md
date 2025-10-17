@@ -143,23 +143,23 @@ file_processor new_name=the_file_{{ yyyymmdd_hhmmss }}.txt \
 ./file_processor.sh \
   src='/path_to/the_file.txt' \
   to_path='/path_to/the_file.txt.enc' \
-  actions='
-    copy %src% --to_gpg gpgp_key=key_id name='file.txt.enc' --to_zip name='file.zip' ;
-  '
+  actions='copy %src% --to_gpg gpgp_key=key_id name=file.txt.enc --to_zip name='file.zip' ;'
 ```
 
 
 ### Get latest file from folder encrypt it zip it and send it
 ```bash
 ./file_processor.sh \
-  src='/path_to/the_file.txt' \
-  actions='
-    copy --src /path_from --mask 'the_file_[0-9]{8}_[0-9]{6}.txt' --sort mtime_desc filter=last --as source_file ; \
-    encrypt --src @{source_file} --key the_key --new_name @{source_file:name} --as encrypted_file ; \
-    zip --src @{encrypted_file} --as ziped_file ; \
-    copy_partner --src @{ziped_file} /target_path'
-  on_success='
-    delete @{src}
+ src='/path_to/the_file.txt' \
+ actions='
+   copy --src /path_from --mask 'the_file_[0-9]{8}_[0-9]{6}.txt' \
+     --sort name_desc filter=last --as source_file ; \
+   encrypt --src @{source_file} --key the_key --new_name @{source_file:name} \
+   --as encrypted_file ; \
+   zip --src @{encrypted_file} --as ziped_file ; \
+   copy_partner --src @{ziped_file} /target_path'
+ on_success='
+   delete @{src}
     
 ```
 

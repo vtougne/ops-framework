@@ -28,3 +28,30 @@ services:
       - "8082:8082"
     volumes:
       - ./artifactory:/app
+
+  python27:
+    image: python:2.7
+    container_name: python27
+    working_dir: /app
+    command:
+      - /bin/bash
+      - -c
+      - |
+        tail -f
+    volumes:
+      - ./ops-framework:/repo/ops-framework
+      - ./project-sample:/apps/dev/project-sample
+
+  ubuntu_nopython:
+    image: ubuntu:22.04
+    container_name: ubuntu_nopython
+    working_dir: /app
+    command:
+      - /bin/bash
+      - -c
+      - |
+        tail -f
+    volumes:
+      - ./ops-framework:/repo/ops-framework
+      - ./project-sample:/apps/dev/project-sample
+
