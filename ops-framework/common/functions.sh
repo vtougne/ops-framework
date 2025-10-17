@@ -43,45 +43,19 @@ f_mask_password() {
   # echo "$@" | sed "$sed_str"
 }
 
-f_log() {
-  local level="$1"
-  shift
-  local msg="$@"
-  local timestamp
-  timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-  local out=$(printf "%s [%-8s] %s\n" "$timestamp" " $level" "$msg")
-  # f_template "$out"
-  # echo $out
-  # $ops_common_path/templater.sh "$@"
-  f_mask_password "$(f_template "$out")"
-  # f_template "$out" 
-  # echo "$out" 
-}
+
+f_log() { local level="$1" ; shift ; printf "%s [%-10s] %s\n" "$(date +'%Y-%m-%d %H:%M:%S')" " $level" "$@" ;}
+
 
 
 function f_escape_sed_string {
   str=$1
-  # echo 'The Stro\ng password' | sed "s/\\\n/\\\\\\\n/g"
   str=`echo $str | sed "s/\\\\\\\\/\\\\\\\\\\\\\\\\\\\\\\\\/g"`
   str=`echo $str | sed 's/\\$/\\\\$/g'`
   str=`echo $str | sed 's/\\[/\\\\[/g'`
   str=`echo $str | sed 's/\\//\\\\\//g'`
   str=`echo $str | sed 's/\`/\\\\\`/g'`
-  # str=`echo $str | sed "s/'/\\\\\'/g"`
-  # str=`echo $str | sed 's/"/\\\\\"/g'`
-  # str=`echo $str | sed 's/&/\\\\\&/g'`
-  # str=`echo $str | sed 's/</\\\\</g'`
-  # str=`echo $str | sed 's/>/\\\\>/g'`
-  # str=`echo $str | sed 's/~/\\\\~/g'`
-  # str=`echo $str | sed 's/\\$/\\\\$/g'`
-  # str=`echo $str | sed 's/\\;/\\\\;/g'`
-  # str=`echo $str | sed "s/\t/\\\\\\\\\t/g"`
-  # str=`echo $str | sed 's/(/\\\(/g'`
-  # str=`echo $str | sed 's/)/\\\)/g'`
-  # str=`echo $str | sed 's/#/\\\\#/g'`
-  # str=`echo $str | sed 's/\`/\\\\\`/g'`
   echo "$str"
-  # echo debug escaped_str: $str
 }
 
 function f_load_var_file {
